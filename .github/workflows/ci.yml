@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Gate (typecheck + lint + test)
+        run: npm run check
+
+      - name: Coverage (100% thresholds enforced per package)
+        run: npm run test:coverage --workspaces --if-present
+
+      - name: Build
+        run: npm run build
+
+      - name: Package artifacts include README and LICENSE
+        run: npm run check:packages

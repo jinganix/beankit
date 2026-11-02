@@ -1,0 +1,55 @@
+name: Publish
+
+# Publish one package (or every package) via npm Trusted Publishing (OIDC, no tokens).
+# Before the first publish of a package, bind it on npmjs.com
+# (package Settings > Trusted Publisher) to:
+#   organization/user: jinganix, repository: beankit, workflow: publish.yml
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: "Package directory under packages/ (e.g. url-join) or 'all'"
+        required: true
+        default: "all"
+
+jobs:
+  publish:
+    name: Publish ${{ inputs.package }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Gate (typecheck + lint + test)
+        run: npm run check
+
+      - name: Build
+        run: |
+          if [ "${{ inputs.package }}" = "all" ]; then
+            npm run build --workspaces --if-present
+          else
+            npm run build -w packages/${{ inputs.package }}
+          fi
+
+      - name: Publish to npm
+        run: |
+          if [ "${{ inputs.package }}" = "all" ]; then
+            for dir in packages/*/; do
+              pkg=$(basename "$dir")
+              npm publish -w "packages/$pkg" --provenance --access public
+            done
+          else
+            npm publish -w packages/${{ inputs.package }} --provenance --access public
+          fi

@@ -1,0 +1,61 @@
+{
+  "name": "@beankit/async-reuse",
+  "version": "0.2.0",
+  "description": "Deduplicate concurrent async operations and reuse resolved results within a configurable lifetime.",
+  "keywords": [
+    "async",
+    "reuse",
+    "deduplicate",
+    "dedupe",
+    "in-flight",
+    "promise",
+    "cache",
+    "memoize",
+    "beankit",
+    "typescript"
+  ],
+  "homepage": "https://github.com/jinganix/beankit#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jinganix/beankit.git",
+    "directory": "packages/async-reuse"
+  },
+  "bugs": {
+    "url": "https://github.com/jinganix/beankit/issues"
+  },
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "npm run typecheck:tsc && npm run lint",
+    "typecheck:tsc": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "lint": "eslint src \"*.ts\" .prettierrc.* eslint.config.js --no-error-on-unmatched-pattern --max-warnings 0",
+    "lint:fix": "eslint src \"*.ts\" .prettierrc.* eslint.config.js --no-error-on-unmatched-pattern --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^5.0.3",
+    "tsup": "^8.5.0",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.3"
+  }
+}

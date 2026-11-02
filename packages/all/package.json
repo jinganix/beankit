@@ -1,0 +1,68 @@
+{
+  "name": "@beankit/all",
+  "version": "0.2.0",
+  "description": "All beankit utilities in one package: url-join, typed events, async reuse, async pool, deferred, promise timeout, cbor. ESM, CJS, and types; treeshakable.",
+  "keywords": [
+    "beankit",
+    "url-join",
+    "event",
+    "event-emitter",
+    "async",
+    "dedupe",
+    "pool",
+    "concurrency",
+    "deferred",
+    "timeout",
+    "typescript",
+    "tiny"
+  ],
+  "homepage": "https://github.com/jinganix/beankit#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jinganix/beankit.git",
+    "directory": "packages/all"
+  },
+  "bugs": {
+    "url": "https://github.com/jinganix/beankit/issues"
+  },
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./bigint": {
+      "types": "./dist/bigint.d.ts",
+      "import": "./dist/bigint.js",
+      "require": "./dist/bigint.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "npm run typecheck:tsc && npm run lint",
+    "typecheck:tsc": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "lint": "eslint src \"*.ts\" .prettierrc.* eslint.config.js --no-error-on-unmatched-pattern --max-warnings 0",
+    "lint:fix": "eslint src \"*.ts\" .prettierrc.* eslint.config.js --no-error-on-unmatched-pattern --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^5.0.3",
+    "tsup": "^8.5.0",
+    "typescript": "^6.0.3",
+    "vitest": "^5.0.3"
+  }
+}

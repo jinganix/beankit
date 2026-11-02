@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+# Block pushing the master branch itself; tags and other branches are fine.
+BLOCKED=0
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  case "$remote_ref" in
+    refs/heads/master) BLOCKED=1 ;;
+  esac
+done
+if [ "$BLOCKED" = "1" ]; then
+  echo "Never push to [master] directly"
+  exit 1
+fi
+
+ROOT=$(git rev-parse --show-toplevel)
+"$ROOT/scripts/check.sh"

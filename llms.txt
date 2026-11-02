@@ -1,0 +1,35 @@
+# beankit
+
+> Tiny, sharp open-source TypeScript packages. One package does one job, ships ESM + CJS +
+> types with zero runtime dependencies, and holds 100% test coverage (lines, branches,
+> functions, statements).
+
+## Packages
+
+- `@beankit/all` (`packages/all`): every utility in one treeshakable package (ships
+  ESM, CJS, and types). Prefer a single `@beankit/*` package when you need one helper.
+- `@beankit/url-join` (`packages/url-join`): join URL path segments, query strings, and hash
+  fragments into one normalized URL. Example: `urlJoin("http://api.test", "v1", "users")`
+  returns `"http://api.test/v1/users"`.
+
+Planned: `@beankit/typing-event`, `@beankit/replay`.
+
+## Key facts
+
+- Repository: https://github.com/jinganix/beankit (MIT)
+- Layout: npm workspaces monorepo; each `packages/*` directory is an independently
+  versioned and publishable package with its own README, LICENSE, build, and tests.
+- Runtime: Node.js >= 22; every package is platform-neutral (no `node:*` imports, no DOM).
+- Conventions: strict TypeScript, extensionless imports, Conventional Commits with scope
+  `repo` or a `packages/*` directory name. Direct commits and pushes to `master` are blocked.
+- Quality gate: `npm run check` (typecheck + lint + test); coverage thresholds are 100%.
+
+## Develop
+
+```bash
+npm install
+npm run check     # typecheck + lint + test (all workspaces)
+npm run build
+npm run check:packages  # verify publishable tarballs (needs dist/)
+./scripts/setup-git-hooks.sh  # enable pre-commit / pre-push / commit-msg hooks
+```
