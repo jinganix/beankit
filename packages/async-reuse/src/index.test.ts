@@ -32,7 +32,9 @@ describe("AsyncReuse", () => {
     const b = reuse.resolve(fetcher, "user:1");
 
     expect(fetcher).toHaveBeenCalledTimes(1);
-    expect(a).toBe(b);
+    // The starter gets a per-call promise; the joiner shares the tracked
+    // one. Both settle with the single execution's outcome.
+    expect(a).not.toBe(b);
     expect(reuse.loading).toBe(true);
 
     gate.resolve("ada");
@@ -151,19 +153,23 @@ describe("AsyncReuse", () => {
     await expect(reuse.value()).resolves.toBe("in");
   });
 
-  it("reset rejects the in-flight holders and ignores late settlement", async () => {
+  it("reset rejects joiners while the starter settles with its own outcome", async () => {
     const reuse = new AsyncReuse<string>();
     const gateA = manual<string>();
-    const old = reuse.resolve(() => gateA.promise, "a");
+    const fetcher = vi.fn(() => gateA.promise);
+    const started = reuse.resolve(fetcher, "a");
+    const joined = reuse.resolve(fetcher, "a");
 
     reuse.reset();
-    await expect(old).rejects.toThrow("AsyncReuse reset");
+    await expect(joined).rejects.toThrow("AsyncReuse reset");
     expect(reuse.loading).toBe(false);
     expect(reuse.completed).toBe(false);
     expect(await reuse.value()).toBe(null);
 
-    // Late settlement of the dropped execution changes nothing.
+    // Late settlement of the dropped execution still settles its starter
+    // but never drives state.
     gateA.resolve("stale");
+    await expect(started).resolves.toBe("stale");
     await sleep(0);
     expect(reuse.resolved).toBe(false);
 

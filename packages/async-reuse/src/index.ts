@@ -45,17 +45,19 @@ class Deferred<T> {
 /**
  * Deduplicate concurrent async operations and reuse resolved results.
  *
- * One instance tracks one operation at a time (single-task). Callers with the
- * same `key` share one execution and receive the very same promise; a
- * different `key` starts a new execution that supersedes the previous one.
- * Superseded holders still settle with their own outcome, but they no longer
- * drive instance state.
+ * One instance tracks one operation at a time (single-task). The caller
+ * that starts an execution gets a per-call promise settling with that
+ * execution's own outcome, even if a later `reset`, expiry, or key
+ * supersedes it. Callers with the same `key` arriving while it runs share
+ * one promise and follow the tracked state (a `reset`/expiry rejects them).
+ * Superseded holders still settle with their own outcome, but they no
+ * longer drive instance state.
  *
  * @example
  * const users = new AsyncReuse<User>();
  * const a = users.resolve(() => fetchUser(id), `user:${id}`);
  * const b = users.resolve(() => fetchUser(id), `user:${id}`);
- * // a === b, fetcher ran once
+ * // fetcher ran once; both settle with its outcome
  */
 export class AsyncReuse<T = void> {
   protected state: AsyncReuseState = AsyncReuseState.idle;
@@ -86,9 +88,10 @@ export class AsyncReuse<T = void> {
   }
 
   /**
-   * Drop tracked state. An in-flight execution keeps running, its holders
-   * reject with an "AsyncReuse reset" error, and its late settlement is
-   * ignored.
+   * Drop tracked state. An in-flight execution keeps running: joiners
+   * holding the shared promise reject with an "AsyncReuse reset" error,
+   * the starter still settles with the execution's own outcome, and late
+   * settlement never drives state.
    */
   reset(): void {
     const dropped = this.deferred;
@@ -98,7 +101,8 @@ export class AsyncReuse<T = void> {
 
   /**
    * Run `fetcher` unless the same `key` already has an in-flight or fresh
-   * result, and return the shared promise (same reference for same key).
+   * result. Joiners share the tracked promise; the starter gets a per-call
+   * promise settling with the execution's own outcome.
    */
   resolve(fetcher: () => Promise<T>, key = ""): Promise<T> {
     if (this.isExpired) {
@@ -125,21 +129,31 @@ export class AsyncReuse<T = void> {
   protected execute(fetcher: () => Promise<T>, key = ""): Promise<T> {
     const current = new Deferred<T>();
     this.markLoading(current, key);
+    // Per-call promise for the starter: it always settles with this
+    // execution's own outcome, even when a later reset, expiry, or key
+    // supersedes the tracked state out from under it.
+    const started = new Deferred<T>();
 
     let outcome: Promise<T>;
     try {
       outcome = fetcher();
     } catch (err) {
       current.reject(err);
+      started.reject(err);
       if (this.deferred === current) {
         this.markRejected();
       }
-      return current.promise;
+      current.promise.catch(() => undefined);
+      started.promise.catch(() => undefined);
+      return started.promise;
     }
 
     outcome.then(
       (data) => {
+        started.resolve(data);
         if (this.deferred !== current) {
+          // Superseded: the starter still settles, and the dropped shared
+          // promise settles idempotently so late success is observed.
           current.resolve(data);
           return;
         }
@@ -147,18 +161,21 @@ export class AsyncReuse<T = void> {
         current.resolve(data);
       },
       (err: unknown) => {
-        current.reject(err);
+        started.reject(err);
         if (this.deferred !== current) {
+          current.reject(err);
           return;
         }
         this.markRejected();
+        current.reject(err);
       },
     );
     // Every execution settles exactly one shared promise that callers may
     // drop; keep a silent observer so a dropped failure is never unhandled.
     // Holders still observe the outcome on their own reference.
     current.promise.catch(() => undefined);
-    return current.promise;
+    started.promise.catch(() => undefined);
+    return started.promise;
   }
 
   protected rejectDropped(deferred: Deferred<T> | null, reason: unknown): void {

@@ -35,10 +35,11 @@ describe("beankit", () => {
   it("re-exports async reuse", async () => {
     expect(AsyncReuseState.idle).toBe("idle");
     const users = new AsyncReuse<string>();
-    const shared = users.resolve(async () => "bean", "user:1");
-    const again = users.resolve(async () => "other", "user:1");
-    expect(again).toBe(shared);
-    await expect(shared).resolves.toBe("bean");
+    const started = users.resolve(async () => "bean", "user:1");
+    const joined = users.resolve(async () => "other", "user:1");
+    expect(joined).not.toBe(started);
+    await expect(started).resolves.toBe("bean");
+    await expect(joined).resolves.toBe("bean");
   });
 
   it("re-exports async pool", async () => {
