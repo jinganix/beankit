@@ -1,6 +1,6 @@
 {
   "name": "@beankit/async-pool",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Run async tasks over a list with a concurrency limit, collecting ordered results.",
   "keywords": [
     "async",

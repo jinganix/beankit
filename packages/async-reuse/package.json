@@ -1,6 +1,6 @@
 {
   "name": "@beankit/async-reuse",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Deduplicate concurrent async operations and reuse resolved results within a configurable lifetime.",
   "keywords": [
     "async",
