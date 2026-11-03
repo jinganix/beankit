@@ -1,6 +1,6 @@
 {
   "name": "@beankit/cbor",
-  "version": "0.1.1",
+  "version": "0.2.1",
   "description": "CBOR encode/decode: BigInt-free by default for old devices, opt-in bigint support via @beankit/cbor/bigint.",
   "keywords": [
     "cbor",
