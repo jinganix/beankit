@@ -9,6 +9,19 @@ export enum AsyncReuseState {
 }
 
 /**
+ * Why a shared promise was dropped: a `reset`, or the result lifetime ran out (`expired`).
+ * The `reason` is machine-readable, so callers can branch on it and localize their own
+ * message instead of matching the English text.
+ */
+export class AsyncReuseError extends Error {
+  override readonly name = "AsyncReuseError";
+
+  constructor(readonly reason: "reset" | "expired") {
+    super(`AsyncReuse ${reason}`);
+  }
+}
+
+/**
  * Single-owner promise with idempotent settle. Late settles are ignored so a
  * superseded execution can never overwrite newer state.
  */
@@ -88,15 +101,15 @@ export class AsyncReuse<T = void> {
   }
 
   /**
-   * Drop tracked state. An in-flight execution keeps running: joiners
-   * holding the shared promise reject with an "AsyncReuse reset" error,
-   * the starter still settles with the execution's own outcome, and late
-   * settlement never drives state.
+   * Drop tracked state. An in-flight execution keeps running: joiners holding
+   * the shared promise reject with an {@link AsyncReuseError} (`reason ===
+   * "reset"`), the starter still settles with the execution's own outcome, and
+   * late settlement never drives state.
    */
   reset(): void {
     const dropped = this.deferred;
     this.markIdle();
-    this.rejectDropped(dropped, new Error("AsyncReuse reset"));
+    this.rejectDropped(dropped, new AsyncReuseError("reset"));
   }
 
   /**
@@ -108,7 +121,7 @@ export class AsyncReuse<T = void> {
     if (this.isExpired) {
       const dropped = this.deferred;
       this.markExpired();
-      this.rejectDropped(dropped, new Error("AsyncReuse expired"));
+      this.rejectDropped(dropped, new AsyncReuseError("expired"));
     }
 
     if (this.deferred && this.key === key) {
