@@ -142,6 +142,12 @@ describe("urlJoin", () => {
     );
   });
 
+  it("keeps an ampersand in the path instead of turning it into a query", () => {
+    expect(urlJoin("http://api.test", "a&b")).toBe("http://api.test/a&b");
+    expect(urlJoin("http://api.test/a&b")).toBe("http://api.test/a&b");
+    expect(urlJoin("http://api.test/a&b", "?c=1")).toBe("http://api.test/a&b?c=1");
+  });
+
   it("merges a later query part after an explicit slash", () => {
     expect(urlJoin("http://foo.com/?a=1", "?b=2")).toBe("http://foo.com/?a=1&b=2");
   });

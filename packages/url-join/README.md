@@ -40,11 +40,16 @@ urlJoin("http://foo.com#", "/tenant"); // "http://foo.com#/tenant"
 - Hosts with ports (`"127.0.0.1:5500"`) and IPv6 hosts (`"[::1]:8080"`) are left alone.
 - A protocol-only (`"http:"`) or root (`"/"`) first segment merges with the next part.
 - Query parts merge with `&`; a dangling `?` is dropped; query-only input keeps its
-  `?` (`"?a=1"` → `"?a=1"`).
+  `?` (`"?a=1"` → `"?a=1"`). An `&` before the first `?` stays path data
+  (`"http://api.test"` + `"a&b"` → `"http://api.test/a&b"`).
+- Only hierarchical URLs (a scheme followed by `//`): non-hierarchical schemes such
+  as `mailto:`, `urn:` or `data:` are rewritten to `scheme://`, so do not join them.
 - The hash suffix is preserved; after `#` the slash is kept only when the input had
   one (`"#"` + `"/tenant"` → `"#/tenant"`); an empty hash is dropped.
 - Hashbang (`#!`) keeps its leading slash.
 - Empty input (or all-empty segments) returns `""`.
 - Any non-string segment throws a `TypeError`.
+- Segments are joined as-is: no percent-encoding or IDN normalization, so pass
+  already-encoded segments when you need them.
 
 Works in Node.js, the browser, and workers: no runtime dependencies, no platform APIs.

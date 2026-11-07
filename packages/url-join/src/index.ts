@@ -131,9 +131,17 @@ function normalize(strArray: string[]): string {
   const hashIndex = str.indexOf("#");
   const beforeHash = hashIndex === -1 ? str : str.slice(0, hashIndex);
   const afterHash = hashIndex === -1 ? "" : str.slice(hashIndex + 1);
-  const queryParts = beforeHash.split(/(?:\?|&)+/);
-  const base = queryParts[0] as string;
-  const query = queryParts.slice(1).filter(Boolean);
+  // Split at the first `?` only: a `&` in the path or hash is data, not a query
+  // separator. Inside the query, `?` and `&` both separate parts.
+  const queryIndex = beforeHash.indexOf("?");
+  const base = queryIndex === -1 ? beforeHash : beforeHash.slice(0, queryIndex);
+  const query =
+    queryIndex === -1
+      ? []
+      : beforeHash
+          .slice(queryIndex + 1)
+          .split(/[?&]+/)
+          .filter(Boolean);
   str =
     `${base}${query.length > 0 ? "?" : ""}${query.join("&")}` +
     `${afterHash !== "" ? `#${afterHash}` : ""}`;
