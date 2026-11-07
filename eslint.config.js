@@ -21,24 +21,6 @@ export default [
       parser: tsParser,
     },
     rules: {
-      "@typescript-eslint/explicit-function-return-type": [
-        "error",
-        {
-          allowConciseArrowFunctionExpressionsStartingWithVoid: true,
-          allowDirectConstAssertionInArrowFunctions: true,
-          allowExpressions: true,
-          allowHigherOrderFunctions: true,
-          allowTypedFunctionExpressions: true,
-        },
-      ],
-      "@typescript-eslint/no-unused-vars": [
-        "error",
-        {
-          argsIgnorePattern: "^_",
-          caughtErrors: "none",
-          varsIgnorePattern: "^_",
-        },
-      ],
       "max-len": [
         "error",
         { code: 100, ignoreStrings: true, ignoreUrls: true, ignoreTemplateLiterals: true },
@@ -75,11 +57,31 @@ export default [
     },
   },
   {
+    // TypeScript rules apply to TypeScript files only; plain `.js`/`.mjs` (eslint
+    // and script configs) would otherwise be asked for type annotations.
     files: ["**/*.ts"],
     rules: {
       "@typescript-eslint/consistent-type-imports": [
         "error",
         { fixStyle: "inline-type-imports", prefer: "type-imports" },
+      ],
+      "@typescript-eslint/explicit-function-return-type": [
+        "error",
+        {
+          allowConciseArrowFunctionExpressionsStartingWithVoid: true,
+          allowDirectConstAssertionInArrowFunctions: true,
+          allowExpressions: true,
+          allowHigherOrderFunctions: true,
+          allowTypedFunctionExpressions: true,
+        },
+      ],
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          caughtErrors: "none",
+          varsIgnorePattern: "^_",
+        },
       ],
     },
   },
@@ -91,8 +93,10 @@ export default [
     },
   },
   {
-    // Package entry points exist purely to expose the public API.
-    files: ["packages/*/src/index.ts"],
+    // Package entry points (`index` plus the `bigint` subpath) exist purely to
+    // expose the public API. The patterns are cwd-independent: workspaces run
+    // eslint from their own directory.
+    files: ["**/src/index.ts", "**/src/bigint.ts"],
     rules: {
       "no-restricted-syntax": "off",
     },
