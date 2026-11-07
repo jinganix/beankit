@@ -22,13 +22,13 @@ pending.clear(); // give up on timing out; the input still settles
   and a `.clear()` method that disarms it.
 - `TimeoutError` is thrown on timeout by default; check it with `instanceof`.
 
-| Option         | Type                                | Purpose                                                      |
-| -------------- | ----------------------------------- | ------------------------------------------------------------ |
-| `milliseconds` | `number`                            | Timeout delay. `Infinity` (or above `2 ** 31 - 1`) never fires. |
-| `message`      | `string \| Error \| false`          | Custom failure: string becomes a `TimeoutError`, an `Error` is thrown as-is, `false` resolves `undefined`. |
-| `fallback`     | `() => value \| Promise<value>`     | Settle with something else instead of failing on timeout.    |
-| `signal`       | `AbortSignal`                       | Reject with the abort reason when the signal aborts.         |
-| `customTimers` | `{ setTimeout, clearTimeout }`      | Timer implementations, e.g. to dodge fake timers in tests.   |
+| Option         | Type                            | Purpose                                                                                                    |
+| -------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `milliseconds` | `number`                        | Timeout delay. `Infinity` (or above `2 ** 31 - 1`) never fires.                                            |
+| `message`      | `string \| Error \| false`      | Custom failure: string becomes a `TimeoutError`, an `Error` is thrown as-is, `false` resolves `undefined`. |
+| `fallback`     | `() => value \| Promise<value>` | Settle with something else instead of failing on timeout.                                                  |
+| `signal`       | `AbortSignal`                   | Reject with the abort reason when the signal aborts.                                                       |
+| `customTimers` | `{ setTimeout, clearTimeout }`  | Timer implementations, e.g. to dodge fake timers in tests.                                                 |
 
 ## Rules
 

@@ -48,6 +48,17 @@ export function promiseTimeout<T, R = T>(
   let timer: ReturnType<typeof globalThis.setTimeout> | undefined;
   let abortSubscription: { signal: AbortSignal; onAbort: () => void } | undefined;
 
+  // Disarms the timeout timer. The handle is dropped before stopping it so a
+  // throwing `clearTimeout` is never retried and cannot resurrect the timer.
+  const disarmTimer = (): void => {
+    if (timer === undefined) {
+      return;
+    }
+    const handle = timer;
+    timer = undefined;
+    stopTimer.call(undefined, handle);
+  };
+
   // Stopping the input is best effort: a missing or throwing `.cancel()`
   // must neither change the outcome nor escape as an uncaught exception.
   const cancelInput = (): void => {
@@ -62,6 +73,13 @@ export function promiseTimeout<T, R = T>(
     const abort = (target: AbortSignal): void => {
       reject(abortReason(target));
       cancelInput();
+      // A timeout timer left armed after the abort would keep the runtime awake
+      // and call `cancel()` a second time when it fires.
+      try {
+        disarmTimer();
+      } catch {
+        // Ignored: the outcome is already decided.
+      }
     };
 
     let invalid: TypeError | undefined;
@@ -161,14 +179,7 @@ export function promiseTimeout<T, R = T>(
     }
   }) as ClearablePromise<T | R | undefined>;
 
-  clearable.clear = () => {
-    if (timer === undefined) {
-      return;
-    }
-
-    stopTimer.call(undefined, timer);
-    timer = undefined;
-  };
+  clearable.clear = disarmTimer;
 
   return clearable;
 }
