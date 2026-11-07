@@ -14,7 +14,8 @@
     "deferred",
     "timeout",
     "typescript",
-    "tiny"
+    "tiny",
+    "cbor"
   ],
   "homepage": "https://github.com/jinganix/beankit#readme",
   "repository": {

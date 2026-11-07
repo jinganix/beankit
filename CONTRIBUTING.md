@@ -49,7 +49,7 @@ echo "feat(url-join): test message" | ./scripts/validate-commit-msg.sh /dev/stdi
 
 **Commit/push gate**: `pre-commit` and `pre-push` both run `scripts/check.sh`,
 which installs dependencies if needed and runs `npm run check`
-(typecheck + lint + tests across all workspaces). Direct commits and pushes to
+(typecheck + lint + format + tests across all workspaces). Direct commits and pushes to
 `master` are blocked — work on a branch:
 
 ```bash

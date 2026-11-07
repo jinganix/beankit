@@ -2,11 +2,9 @@
  * Every beankit utility in one import: URL joining, typed events, async reuse,
  * async pool, deferred promises, promise timeouts, CBOR codec.
  *
- * Each helper also ships as its own zero-dependency package
- * (`@beankit/url-join`, `@beankit/event`, `@beankit/async-reuse`,
- * `@beankit/async-pool`, `@beankit/deferred`, `@beankit/promise-timeout`,
- * `@beankit/cbor`);
- * install one
+ * Each helper also ships as its own zero-dependency package (`@beankit/url-join`,
+ * `@beankit/event`, `@beankit/async-reuse`, `@beankit/async-pool`,
+ * `@beankit/deferred`, `@beankit/promise-timeout`, `@beankit/cbor`); install one
  * of those instead when you need only a single helper. Named exports plus
  * `sideEffects: false` keep unused helpers treeshakable.
  *
