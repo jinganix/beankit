@@ -1,6 +1,6 @@
 type Callback = {
   (...args: unknown[]): void | Promise<void>;
-  order?: number;
+  order: number;
 };
 
 interface EventsMap {
@@ -20,7 +20,8 @@ export interface Unsubscribe {
  * Typed event emitter with ordered listeners.
  *
  * Listeners run sequentially in ascending `order` (`order` defaults to `0`),
- * and `emit` awaits each listener before running the next one.
+ * and `emit` awaits each listener before running the next one. Order belongs to
+ * the subscription, so one callback can be registered twice with two orders.
  *
  * @example
  * const emitter = createEvents<{ hello: (name: string) => void }>();
@@ -30,13 +31,17 @@ export interface Unsubscribe {
 export class Emitter<Events extends EventsMap = DefaultEvents> {
   events: Partial<{ [E in keyof Events]: Callback[] }> = {};
 
-  on<K extends keyof Events>(event: K, cb: Events[K], order?: number): Unsubscribe {
-    cb.order = order;
+  on<K extends keyof Events>(event: K, cb: Events[K], order = 0): Unsubscribe {
+    // Each subscription gets its own wrapper, so `order` belongs to the
+    // subscription instead of the callback: the same (or a frozen) handler can
+    // be registered twice with different orders.
+    const listener: Callback = (...args) => cb(...args);
+    listener.order = order;
     const callbacks = this.events[event] ?? (this.events[event] = []);
-    callbacks.push(cb);
-    callbacks.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    callbacks.push(listener);
+    callbacks.sort((a, b) => a.order - b.order);
     return () => {
-      this.events[event] = this.events[event]?.filter((x) => cb !== x);
+      this.events[event] = this.events[event]?.filter((x) => listener !== x);
     };
   }
 
