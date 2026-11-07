@@ -64,8 +64,31 @@ describe("cbor without TextDecoder/TextEncoder", () => {
   it("should decode replacement characters for truncated sequences", async () => {
     const { getTextCodec } = await loadFreshCodec(["TextDecoder"]);
     const decode = getTextCodec().decode;
-    expect(decode(new Uint8Array([0xc3]))).toBe("�");
-    expect(decode(new Uint8Array([0xe2, 0x82]))).toBe("��");
-    expect(decode(new Uint8Array([0xf0, 0x9f]))).toBe("��");
+    // One U+FFFD per maximal subpart, exactly like TextDecoder.
+    expect(decode(new Uint8Array([0xc3]))).toBe("\ufffd");
+    expect(decode(new Uint8Array([0xe2, 0x82]))).toBe("\ufffd");
+    expect(decode(new Uint8Array([0xf0, 0x9f]))).toBe("\ufffd");
+  });
+
+  it("should decode malformed UTF-8 exactly like TextDecoder", async () => {
+    // The native codec is deleted inside loadFreshCodec, so hold a reference first.
+    const native = new (originalDecoder as new () => { decode: (b: Uint8Array) => string })();
+    const nativeDecode = (bytes: Uint8Array): string => native.decode(bytes);
+    const { getTextCodec } = await loadFreshCodec(["TextDecoder"]);
+    const fallback = getTextCodec().decode;
+
+    const corpora: Uint8Array[] = [];
+    for (const lead of [0xc2, 0xc3, 0xdf, 0xe0, 0xed, 0xef, 0xf0, 0xf4, 0xf5]) {
+      for (const next of [0x00, 0x7f, 0x80, 0x8f, 0x90, 0x9f, 0xa0, 0xbf, 0xc0, 0xff]) {
+        corpora.push(new Uint8Array([lead, next]), new Uint8Array([lead, next, next]));
+      }
+    }
+    for (let first = 0; first < 0x100; first++) {
+      corpora.push(new Uint8Array([first]));
+    }
+
+    for (const bytes of corpora) {
+      expect(fallback(bytes), `bytes ${Array.from(bytes).join(",")}`).toBe(nativeDecode(bytes));
+    }
   });
 });
