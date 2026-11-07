@@ -6,11 +6,32 @@
 
 ## Packages
 
-- `@beankit/all` (`packages/all`): every utility in one treeshakable package (ships
-  ESM, CJS, and types). Prefer a single `@beankit/*` package when you need one helper.
+Every helper is published both standalone and re-exported from `@beankit/all` (treeshakable;
+prefer a single `@beankit/*` package when you need one helper).
+
+- `@beankit/all` (`packages/all`): every utility in one package, plus the `@beankit/all/bigint`
+  subpath for native bigint CBOR. Install one of the `@beankit/*` packages instead when you
+  need a single helper.
 - `@beankit/url-join` (`packages/url-join`): join URL path segments, query strings, and hash
   fragments into one normalized URL. Example: `urlJoin("http://api.test", "v1", "users")`
   returns `"http://api.test/v1/users"`.
+- `@beankit/event` (`packages/event`): typed event emitter; listeners run sequentially in
+  ascending `order` and `emit` awaits each one. Example:
+  `createEvents<{ hello: (name: string) => void }>()`.
+- `@beankit/async-reuse` (`packages/async-reuse`): deduplicate concurrent async calls by key
+  and reuse resolved results within a lifetime. Example:
+  `const users = new AsyncReuse<User>(); users.resolve(() => fetchUser(id), "user:" + id)`.
+- `@beankit/async-pool` (`packages/async-pool`): run async tasks over a list with a
+  concurrency limit and keep results in input order. Example:
+  `await asyncPool(2, ids, (id) => fetchUser(id))`.
+- `@beankit/promise-timeout` (`packages/promise-timeout`): race a promise against a timeout
+  with fallback, abort signal, and cancelable input. Example:
+  `await promiseTimeout(fetchUser(id), { milliseconds: 2000 })`.
+- `@beankit/deferred` (`packages/deferred`): `resolve`/`reject` detached from the executor,
+  backed by native `Promise.withResolvers` with a fallback. Example:
+  `const gate = new Deferred<string>()`.
+- `@beankit/cbor` (`packages/cbor`): CBOR encode/decode, BigInt-free by default with an opt-in
+  `@beankit/cbor/bigint` subpath. Example: `decodeCBOR(encodeCBOR("hello world"))`.
 
 Planned: `@beankit/typing-event`, `@beankit/replay`.
 
@@ -22,13 +43,13 @@ Planned: `@beankit/typing-event`, `@beankit/replay`.
 - Runtime: Node.js >= 22; every package is platform-neutral (no `node:*` imports, no DOM).
 - Conventions: strict TypeScript, extensionless imports, Conventional Commits with scope
   `repo` or a `packages/*` directory name. Direct commits and pushes to `master` are blocked.
-- Quality gate: `npm run check` (typecheck + lint + test); coverage thresholds are 100%.
+- Quality gate: `npm run check` (typecheck + lint + format + test); coverage thresholds are 100%.
 
 ## Develop
 
 ```bash
 npm install
-npm run check     # typecheck + lint + test (all workspaces)
+npm run check     # typecheck + lint + format + test (all workspaces)
 npm run build
 npm run check:packages  # verify publishable tarballs (needs dist/)
 ./scripts/setup-git-hooks.sh  # enable pre-commit / pre-push / commit-msg hooks

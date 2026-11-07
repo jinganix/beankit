@@ -77,6 +77,11 @@ for (const workspace of WORKSPACES) {
 
   const { stdout } = await run("npm", ["pack", "--dry-run", "--json"], { cwd: dir });
   const files = packFiles(JSON.parse(stdout));
+  for (const file of REQUIRED) {
+    if (!files.includes(file)) {
+      failures.push(`${workspace} tarball does not ship ${file}`);
+    }
+  }
   for (const entry of declaredEntries(pkg)) {
     const stripped = entry.replace(/^\.\//, "");
     if (!files.some((file) => file === stripped || file.startsWith(`${stripped}/`))) {

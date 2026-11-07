@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "beankit: tiny, sharp open-source packages (url-join, typing-event, replay, ...).",
+  "description": "beankit: tiny, sharp open-source packages (url-join, event, async-reuse, async-pool, promise-timeout, deferred, cbor).",
   "keywords": [
     "beankit",
     "url-join",
@@ -29,11 +29,11 @@
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
-    "lint:fix": "npm run lint:fix --workspaces --if-present",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "npm run typecheck && npm run lint && npm test",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
     "check:packages": "node scripts/check-packages.mjs"
   },
   "devDependencies": {

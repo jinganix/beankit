@@ -9,6 +9,9 @@ on:
   workflow_dispatch:
 
 jobs:
+  # The job name must stay exactly "Check": branch protection requires that
+  # status context. A matrix would rename the check runs ("Check (Node 22)") and
+  # the pull request would wait forever for a status that never appears.
   check:
     name: Check
     runs-on: ubuntu-latest
@@ -26,7 +29,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Gate (typecheck + lint + test)
+      - name: Gate (typecheck + lint + format + test)
         run: npm run check
 
       - name: Coverage (100% thresholds enforced per package)
@@ -37,3 +40,23 @@ jobs:
 
       - name: Package artifacts include README and LICENSE
         run: npm run check:packages
+
+  # The `engines` floor in package.json must actually work; the required
+  # "Check" job above only proves the current LTS.
+  engine-floor:
+    name: Check (Node 22 engine floor)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Gate (typecheck + lint + format + test)
+        run: npm run check

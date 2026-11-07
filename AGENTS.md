@@ -13,20 +13,22 @@ Guidance for automated contributions to `beankit`.
 
 Run from the repo root:
 
-| Task       | Command                                    |
-| ---------- | ------------------------------------------ |
-| Install    | `npm install`                              |
-| Build      | `npm run build`                            |
-| Typecheck  | `npm run typecheck`                        |
-| Lint       | `npm run lint`                             |
-| Lint (fix) | `npm run lint:fix`                         |
-| Test       | `npm test`                                 |
-| Coverage   | `npm run test:coverage -w packages/<name>` |
-| Check      | `npm run check`                            |
-| Packages   | `npm run check:packages`                   |
+| Task         | Command                                    |
+| ------------ | ------------------------------------------ |
+| Install      | `npm install`                              |
+| Build        | `npm run build`                            |
+| Typecheck    | `npm run typecheck`                        |
+| Lint         | `npm run lint`                             |
+| Lint (fix)   | `npm run lint:fix`                         |
+| Format       | `npm run format`                           |
+| Format check | `npm run format:check`                     |
+| Test         | `npm test`                                 |
+| Coverage     | `npm run test:coverage -w packages/<name>` |
+| Check        | `npm run check`                            |
+| Packages     | `npm run check:packages`                   |
 
-Before committing: `npm run check` (typecheck + lint + test across all workspaces) must be
-green. The `.githooks/pre-commit` and `pre-push` hooks run the same gate via
+Before committing: `npm run check` (typecheck + lint + format + test across all workspaces)
+must be green. The `.githooks/pre-commit` and `pre-push` hooks run the same gate via
 `scripts/check.sh`; enable them once per clone with
 `./scripts/setup-git-hooks.sh`. Direct commits and pushes to `master` are blocked —
 work on a branch. Commit messages follow [CONTRIBUTING.md](CONTRIBUTING.md)
@@ -36,7 +38,8 @@ work on a branch. Commit messages follow [CONTRIBUTING.md](CONTRIBUTING.md)
 
 - TypeScript strict; `verbatimModuleSyntax`; `consistent-type-imports` (inline `type`).
 - Imports are **extensionless** (`moduleResolution: Bundler`).
-- Re-exports are only allowed in a package `src/index.ts` (public API barrel).
+- Re-exports are only allowed in package entry points (`src/index.ts`, and the
+  `src/bigint.ts` subpath) — the public API barrel.
 - `max-len` 100; Prettier owns formatting.
 - Tests live next to sources as `*.test.ts` (vitest).
 

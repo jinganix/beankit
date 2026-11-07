@@ -39,40 +39,79 @@ function utf8Encode(text: string): Uint8Array {
   return new Uint8Array(bytes);
 }
 
+/**
+ * Decodes UTF-8 exactly like `TextDecoder`: an invalid sequence emits one U+FFFD for its
+ * maximal subpart, and the byte that broke it is decoded again. A strict decoder matters
+ * because the same CBOR bytes must not decode to different text on a runtime without
+ * `TextDecoder` (e.g. WeChat MiniProgram JSCore) than on Node or the browser.
+ */
 function utf8Decode(bytes: Uint8Array): string {
   let result = "";
-  for (let i = 0; i < bytes.length;) {
-    // The loop guard keeps the index in bounds.
+  let i = 0;
+  while (i < bytes.length) {
     const first = bytes[i]!;
     if (first < 0x80) {
       result += String.fromCharCode(first);
       i += 1;
-    } else if (first >> 5 === 0x06 && i + 1 < bytes.length) {
-      const second = bytes[i + 1]!;
-      result += String.fromCharCode(((first & 0x1f) << 6) | (second & 0x3f));
-      i += 2;
-    } else if (first >> 4 === 0x0e && i + 2 < bytes.length) {
-      const second = bytes[i + 1]!;
-      const third = bytes[i + 2]!;
-      result += String.fromCharCode(
-        ((first & 0x0f) << 12) | ((second & 0x3f) << 6) | (third & 0x3f),
-      );
-      i += 3;
-    } else if (first >> 3 === 0x1e && i + 3 < bytes.length) {
-      const second = bytes[i + 1]!;
-      const third = bytes[i + 2]!;
-      const fourth = bytes[i + 3]!;
-      const codePoint =
-        ((first & 0x07) << 18) | ((second & 0x3f) << 12) | ((third & 0x3f) << 6) | (fourth & 0x3f);
-      result += String.fromCharCode(
-        0xd8_00 + ((codePoint - 0x1_00_00) >> 10),
-        0xdc_00 + ((codePoint - 0x1_00_00) & 0x3_ff),
-      );
-      i += 4;
-    } else {
-      result += "�";
-      i += 1;
+      continue;
     }
+
+    // Continuation count plus the range the first continuation byte must fall in,
+    // which is what rejects overlong forms, surrogates and code points above U+10FFFF.
+    let continuations: number;
+    let lower = 0x80;
+    let upper = 0xbf;
+    let codePoint: number;
+    if (first >= 0xc2 && first <= 0xdf) {
+      continuations = 1;
+      codePoint = first & 0x1f;
+    } else if (first >= 0xe0 && first <= 0xef) {
+      continuations = 2;
+      codePoint = first & 0x0f;
+      if (first === 0xe0) lower = 0xa0;
+      if (first === 0xed) upper = 0x9f;
+    } else if (first >= 0xf0 && first <= 0xf4) {
+      continuations = 3;
+      codePoint = first & 0x07;
+      if (first === 0xf0) lower = 0x90;
+      if (first === 0xf4) upper = 0x8f;
+    } else {
+      result += "\ufffd";
+      i += 1;
+      continue;
+    }
+
+    let consumed = 1;
+    for (let offset = 1; offset <= continuations; offset++) {
+      const index = i + offset;
+      // Truncated input: the bytes read so far are one maximal subpart.
+      if (index >= bytes.length) {
+        consumed = offset;
+        break;
+      }
+      const byte = bytes[index]!;
+      // A byte outside the range ends the sequence here and is decoded again next.
+      if (offset === 1 ? byte < lower || byte > upper : byte < 0x80 || byte > 0xbf) {
+        consumed = offset;
+        break;
+      }
+      codePoint = (codePoint << 6) | (byte & 0x3f);
+      consumed = offset + 1;
+    }
+    if (consumed <= continuations) {
+      result += "\ufffd";
+      i += consumed;
+      continue;
+    }
+
+    result +=
+      continuations === 3
+        ? String.fromCharCode(
+            0xd8_00 + ((codePoint - 0x1_00_00) >> 10),
+            0xdc_00 + ((codePoint - 0x1_00_00) & 0x3_ff),
+          )
+        : String.fromCharCode(codePoint);
+    i += consumed;
   }
   return result;
 }

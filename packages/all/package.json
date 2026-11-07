@@ -1,6 +1,6 @@
 {
   "name": "@beankit/all",
-  "version": "0.2.1",
+  "version": "0.2.3",
   "description": "All beankit utilities in one package: url-join, typed events, async reuse, async pool, deferred, promise timeout, cbor. ESM, CJS, and types; treeshakable.",
   "keywords": [
     "beankit",
@@ -14,7 +14,8 @@
     "deferred",
     "timeout",
     "typescript",
-    "tiny"
+    "tiny",
+    "cbor"
   ],
   "homepage": "https://github.com/jinganix/beankit#readme",
   "repository": {

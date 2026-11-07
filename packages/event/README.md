@@ -27,7 +27,11 @@ unsubscribe();
 ## Rules
 
 - Listeners run sequentially in ascending `order`; unordered listeners count as `0`.
+- `order` belongs to the subscription, not the callback: the same handler can be
+  registered twice with two orders, and an already frozen handler is accepted.
 - `emit` awaits async listeners, so a slow listener delays the ones after it.
 - Unsubscribing removes only that subscription; other listeners keep working.
+- An `emit` already in progress keeps the listeners it started with, so an
+  unsubscribe during that `emit` does not skip the removed listener.
 - A handler subscribed twice runs twice.
 - Works in Node.js, the browser, and workers: no runtime dependencies, no platform APIs.

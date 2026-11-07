@@ -105,6 +105,30 @@ describe("Emitter", () => {
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps a per-subscription order for one shared handler", async () => {
+    const emitter = new Emitter<{ test: () => void }>();
+    const calls: string[] = [];
+    const shared = (): void => void calls.push("shared");
+    emitter.on("test", shared, 5);
+    emitter.on("test", () => void calls.push("middle"), 3);
+    emitter.on("test", shared, 1);
+
+    await emitter.emit("test");
+
+    expect(calls).toEqual(["shared", "middle", "shared"]);
+  });
+
+  it("keeps a per-subscription order when the handler is frozen", async () => {
+    const emitter = new Emitter<{ test: () => void }>();
+    const calls: string[] = [];
+    const handler = Object.freeze((): void => void calls.push("frozen"));
+
+    expect(() => emitter.on("test", handler, 2)).not.toThrow();
+    await emitter.emit("test");
+
+    expect(calls).toEqual(["frozen"]);
+  });
+
   it("calls a twice-subscribed handler twice", async () => {
     const emitter = new Emitter<{ test: () => void }>();
     const handler = vi.fn();

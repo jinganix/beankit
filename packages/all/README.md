@@ -1,6 +1,7 @@
 # @beankit/all
 
-All beankit utilities in one package: URL joining, typed events, async reuse, async pool, deferred promises, promise timeouts.
+All beankit utilities in one package: URL joining, typed events, async reuse, async pool,
+deferred promises, promise timeouts, and the CBOR codec.
 Zero dependencies, works in Node.js, browsers, and workers (ships ESM, CJS, and types).
 
 ```bash
@@ -36,7 +37,7 @@ const avatars = await asyncPool(2, ids, (id) => fetchAvatar(id));
 | `urlJoin(...parts)`                                        | Join URL segments into one normalized URL                 | `@beankit/url-join`        |
 | `createEvents<T>()`, `Emitter`                             | Typed event emitter with ordered, awaited listeners       | `@beankit/event`           |
 | `Unsubscribe`                                              | Function type returned by `Emitter.on`                    | `@beankit/event`           |
-| `AsyncReuse`, `AsyncReuseState`                            | Deduplicate async operations, reuse results               | `@beankit/async-reuse`     |
+| `AsyncReuse`, `AsyncReuseState`, `AsyncReuseError`         | Deduplicate async operations, reuse results               | `@beankit/async-reuse`     |
 | `asyncPool(poolLimit, items, fn)`                          | Run async tasks with a concurrency limit, ordered results | `@beankit/async-pool`      |
 | `Deferred`                                                 | Deferred promise backed by native `Promise.withResolvers` | `@beankit/deferred`        |
 | `promiseTimeout(promise, options)`, `TimeoutError`         | Race a promise against a timeout with fallback and abort  | `@beankit/promise-timeout` |

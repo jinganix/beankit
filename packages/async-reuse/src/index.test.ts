@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { describe, expect, it, vi } from "vitest";
 
-import { AsyncReuse } from "./index";
+import { AsyncReuse, AsyncReuseError } from "./index";
 
 function manual<T>(): {
   promise: Promise<T>;
@@ -32,7 +32,9 @@ describe("AsyncReuse", () => {
     const b = reuse.resolve(fetcher, "user:1");
 
     expect(fetcher).toHaveBeenCalledTimes(1);
-    expect(a).toBe(b);
+    // The starter gets a per-call promise; the joiner shares the tracked
+    // one. Both settle with the single execution's outcome.
+    expect(a).not.toBe(b);
     expect(reuse.loading).toBe(true);
 
     gate.resolve("ada");
@@ -151,19 +153,23 @@ describe("AsyncReuse", () => {
     await expect(reuse.value()).resolves.toBe("in");
   });
 
-  it("reset rejects the in-flight holders and ignores late settlement", async () => {
+  it("reset rejects joiners while the starter settles with its own outcome", async () => {
     const reuse = new AsyncReuse<string>();
     const gateA = manual<string>();
-    const old = reuse.resolve(() => gateA.promise, "a");
+    const fetcher = vi.fn(() => gateA.promise);
+    const started = reuse.resolve(fetcher, "a");
+    const joined = reuse.resolve(fetcher, "a");
 
     reuse.reset();
-    await expect(old).rejects.toThrow("AsyncReuse reset");
+    await expect(joined).rejects.toThrow("AsyncReuse reset");
     expect(reuse.loading).toBe(false);
     expect(reuse.completed).toBe(false);
     expect(await reuse.value()).toBe(null);
 
-    // Late settlement of the dropped execution changes nothing.
+    // Late settlement of the dropped execution still settles its starter
+    // but never drives state.
     gateA.resolve("stale");
+    await expect(started).resolves.toBe("stale");
     await sleep(0);
     expect(reuse.resolved).toBe(false);
 
@@ -172,6 +178,40 @@ describe("AsyncReuse", () => {
     gateB.resolve("bee");
     await expect(fresh).resolves.toBe("bee");
     expect(reuse.key).toBe("b");
+  });
+
+  it("rejects dropped holders with a machine-readable AsyncReuseError", async () => {
+    const reuse = new AsyncReuse<string>();
+    const gate = manual<string>();
+    const started = reuse.resolve(() => gate.promise, "k");
+    const joined = reuse.resolve(() => gate.promise, "k");
+
+    reuse.reset();
+    const resetError = await joined.catch((error: unknown) => error);
+    expect(resetError).toBeInstanceOf(AsyncReuseError);
+    expect((resetError as AsyncReuseError).reason).toBe("reset");
+    expect((resetError as Error).name).toBe("AsyncReuseError");
+
+    gate.resolve("stale");
+    await expect(started).resolves.toBe("stale");
+  });
+
+  it("rejects in-flight joiners with reason expired when the lifetime runs out", async () => {
+    const reuse = new AsyncReuse<string>();
+    const loading = manual<string>();
+    reuse.resolve(() => loading.promise, "k");
+    const joined = reuse.resolve(() => loading.promise, "k");
+    reuse.setExpiresAt(Date.now() - 1);
+
+    const fresh = manual<string>();
+    const next = reuse.resolve(() => fresh.promise, "k");
+
+    const expiredError = await joined.catch((error: unknown) => error);
+    expect(expiredError).toBeInstanceOf(AsyncReuseError);
+    expect((expiredError as AsyncReuseError).reason).toBe("expired");
+
+    fresh.resolve("v2");
+    await expect(next).resolves.toBe("v2");
   });
 
   it("forceResolve bypasses the cache and supersedes in-flight work", async () => {

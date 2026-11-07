@@ -242,6 +242,39 @@ describe("promiseTimeout", () => {
     await expect(pending).resolves.toBe("done");
   });
 
+  it("disarms the timer when the signal aborts", async () => {
+    const controller = new AbortController();
+    const input = Object.assign(never<string>(), { cancel: vi.fn() });
+    const stopTimer = vi.fn() as unknown as typeof clearTimeout;
+    const pending = promiseTimeout(input, {
+      milliseconds: 1000,
+      signal: controller.signal,
+      customTimers: { setTimeout, clearTimeout: stopTimer },
+    });
+
+    controller.abort(new Error("stop now"));
+    await expect(pending).rejects.toThrow("stop now");
+
+    // The timer is gone, so it can neither keep the runtime awake nor call cancel twice.
+    expect(stopTimer).toHaveBeenCalledTimes(1);
+    expect(input.cancel).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the abort outcome when clearTimeout throws", async () => {
+    const controller = new AbortController();
+    const failing = (): void => {
+      throw new Error("clear boom");
+    };
+    const pending = promiseTimeout(never<string>(), {
+      milliseconds: 10,
+      signal: controller.signal,
+      customTimers: { setTimeout, clearTimeout: failing as unknown as typeof clearTimeout },
+    });
+
+    controller.abort(new Error("stop now"));
+    await expect(pending).rejects.toThrow("stop now");
+  });
+
   it("keeps the settled outcome when clearTimeout throws", async () => {
     const failing = (): void => {
       throw new Error("clear boom");

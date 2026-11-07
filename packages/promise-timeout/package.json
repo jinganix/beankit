@@ -1,6 +1,6 @@
 {
   "name": "@beankit/promise-timeout",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Race a promise against a timeout with fallback, custom errors, AbortSignal, and cleanup.",
   "keywords": [
     "promise",
