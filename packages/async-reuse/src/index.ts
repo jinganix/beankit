@@ -237,8 +237,8 @@ export class AsyncReuse<T = void> {
   }
 
   /**
-   * Latest settled value, or `null` when idle, loading without a result yet,
-   * or rejected. Never throws.
+   * Latest settled value, or `null` when idle or rejected. While loading it
+   * waits for the in-flight result. Never throws.
    */
   async value(): Promise<T | null> {
     if (!this.deferred) {

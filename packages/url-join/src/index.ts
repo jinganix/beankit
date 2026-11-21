@@ -18,7 +18,7 @@ const HOST_PORT = /^[^/:]+:\d+(?:[/?#]|$)/;
  * urlJoin(["http://api.test", "v1"]); // "http://api.test/v1"
  */
 export function urlJoin(...args: Array<string | string[]>): string {
-  const parts = (Array.isArray(args[0]) ? args[0] : args) as string[];
+  const parts = (args as unknown[]).flat() as string[];
   return normalize([...parts]);
 }
 
@@ -40,7 +40,10 @@ function normalize(strArray: string[]): string {
   }
 
   if (parts.length > 1 && parts[0] === "/") {
-    parts[0] = `${parts.shift() as string}${parts[0] as string}`;
+    // Collapse the joined slashes: "/" + "/foo" must stay "/foo", not "//foo"
+    // (which would read as a protocol-relative URL with host "foo").
+    parts.shift();
+    parts[0] = `/${(parts[0] as string).replace(/^[/]+/, "")}`;
   }
 
   // `file:` keeps three slashes, anything else normalizes to `protocol://`.

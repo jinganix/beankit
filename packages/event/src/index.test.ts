@@ -140,6 +140,50 @@ describe("Emitter", () => {
     expect(handler).toHaveBeenCalledTimes(2);
   });
 
+  it("finishes the current emit for listeners unsubscribed mid-emit", async () => {
+    const emitter = new Emitter<{ test: () => void }>();
+    const calls: string[] = [];
+    let unsubscribeSecond: () => void = () => {};
+    emitter.on("test", () => {
+      calls.push("first");
+      unsubscribeSecond();
+    });
+    unsubscribeSecond = emitter.on("test", () => void calls.push("second"));
+
+    // Snapshot: the removed listener still finishes this emit, then is gone.
+    await emitter.emit("test");
+    expect(calls).toEqual(["first", "second"]);
+    await emitter.emit("test");
+    expect(calls).toEqual(["first", "second", "first"]);
+  });
+
+  it("runs listeners added during emit on the next emit", async () => {
+    const emitter = new Emitter<{ test: () => void }>();
+    const calls: string[] = [];
+    emitter.on("test", () => {
+      calls.push("first");
+      emitter.on("test", () => void calls.push("late"));
+    });
+
+    await emitter.emit("test");
+    expect(calls).toEqual(["first"]);
+    await emitter.emit("test");
+    expect(calls).toEqual(["first", "first", "late"]);
+  });
+
+  it("supports event names that collide with Object.prototype", async () => {
+    const emitter = new Emitter<Record<string, () => void>>();
+    const calls: string[] = [];
+
+    await expect(emitter.emit("constructor")).resolves.toBeUndefined();
+    emitter.on("__proto__", () => void calls.push("proto"));
+    emitter.on("toString", () => void calls.push("string"));
+    await emitter.emit("__proto__");
+    await emitter.emit("toString");
+
+    expect(calls).toEqual(["proto", "string"]);
+  });
+
   it("ignores unsubscribe for an event with no listeners", async () => {
     const emitter = new Emitter<{ test: () => void }>();
     const handler = vi.fn();

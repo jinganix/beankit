@@ -115,6 +115,10 @@ function writeObject(
   if (value instanceof Map) {
     out.push(...writeHead(MAJOR_TYPE_MAP, value.size));
     for (const [key, item] of value) {
+      // Keep encode and decode in agreement: this decoder only represents scalar keys.
+      if (typeof key !== "string" && typeof key !== "number" && typeof key !== "bigint") {
+        throw new Error("map key must be a string, number or bigint");
+      }
       writeValue(key, out, writeArgument);
       writeValue(item, out, writeArgument);
     }

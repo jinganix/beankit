@@ -65,6 +65,6 @@ decodeCBORWithBigInt(encodeCBORWithBigInt(2n ** 64n - 1n)); // 18446744073709551
   `@beankit/*` package instead for the smallest footprint.
 - **TypeScript and JavaScript**: types ship inline (`dist/index.d.ts`); plain JS
   can `import` the ESM build or `require()` the CJS build with no extra setup.
-- **Pick one**: use either `beankit` or the standalone `@beankit/*` packages in
+- **Pick one**: use either `@beankit/all` or the standalone `@beankit/*` packages in
   one app, not both — the bundle carries its own copies, so `instanceof` and
   caches are not shared across the two.

@@ -29,7 +29,9 @@ export interface Unsubscribe {
  * await emitter.emit("hello", "bean");
  */
 export class Emitter<Events extends EventsMap = DefaultEvents> {
-  events: Partial<{ [E in keyof Events]: Callback[] }> = {};
+  // Null prototype: an event named "constructor" or "toString" must not resolve to
+  // Object.prototype members instead of a listener array.
+  events: Partial<{ [E in keyof Events]: Callback[] }> = Object.create(null);
 
   on<K extends keyof Events>(event: K, cb: Events[K], order = 0): Unsubscribe {
     // Each subscription gets its own wrapper, so `order` belongs to the
@@ -46,7 +48,8 @@ export class Emitter<Events extends EventsMap = DefaultEvents> {
   }
 
   async emit<K extends keyof Events>(event: K, ...args: Parameters<Events[K]>): Promise<void> {
-    const callbacks = this.events[event] ?? [];
+    // Snapshot: listeners added or removed mid-emit take effect next time.
+    const callbacks = [...(this.events[event] ?? [])];
     for (const cb of callbacks) {
       await cb(...args);
     }

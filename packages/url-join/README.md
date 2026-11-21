@@ -15,7 +15,7 @@ import { urlJoin } from "@beankit/url-join";
 urlJoin(...parts: Array<string | string[]>): string;
 ```
 
-Pass segments as separate arguments or as one array. Empty segments are skipped,
+Pass segments as separate arguments, as one array, or mixed. Empty segments are skipped,
 empty input returns `""`, and any non-string segment throws a `TypeError`.
 
 ## Usage
