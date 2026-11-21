@@ -45,11 +45,19 @@ jobs:
 
       - name: Publish to npm
         run: |
-          if [ "${{ inputs.package }}" = "all" ]; then
-            for dir in packages/*/; do
-              pkg=$(basename "$dir")
-              npm publish -w "packages/$pkg" --provenance --access public
-            done
-          else
-            npm publish -w packages/${{ inputs.package }} --provenance --access public
+          dirs=$(ls -d packages/*/)
+          if [ "${{ inputs.package }}" != "all" ]; then
+            dirs="packages/${{ inputs.package }}"
           fi
+          for dir in $dirs; do
+            dir=${dir%/}
+            name=$(node -p "require('./$dir/package.json').name")
+            version=$(node -p "require('./$dir/package.json').version")
+            # Unchanged packages keep a version the registry already has; publishing
+            # it again only aborts the loop before the bumped packages are reached.
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "$name@$version is already published, skipping"
+              continue
+            fi
+            npm publish -w "$dir" --provenance --access public
+          done

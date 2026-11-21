@@ -138,6 +138,8 @@ export function promiseTimeout<T, R = T>(
     }
 
     const onTimeout = (): void => {
+      // The timer already fired: mark it so a later clear() is a no-op.
+      timer = undefined;
       if (fallback !== undefined) {
         try {
           resolve(fallback());
@@ -166,7 +168,8 @@ export function promiseTimeout<T, R = T>(
     try {
       clearable.clear();
     } catch {
-      // Ignored: the handle is left in place so `clear()` can be retried.
+      // Ignored: disarm drops the handle before stopping the timer, so a
+      // throwing `clearTimeout` is never retried.
     }
 
     try {

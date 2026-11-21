@@ -307,6 +307,19 @@ describe("promiseTimeout", () => {
     await sleep(30);
   });
 
+  it("does not stop an already fired timer twice", async () => {
+    const stopTimer = vi.fn() as unknown as typeof clearTimeout;
+    const pending = promiseTimeout(never<string>(), {
+      milliseconds: 10,
+      customTimers: { setTimeout, clearTimeout: stopTimer },
+    });
+    await expect(pending).rejects.toThrow(TimeoutError);
+    // The fired timer needs no stopping: neither cleanup nor a later
+    // clear() touches the dead handle.
+    pending.clear();
+    expect(stopTimer).not.toHaveBeenCalled();
+  });
+
   it("observes an already rejected input for invalid options", async () => {
     const input = Promise.reject(new Error("input boom"));
     await expect(promiseTimeout(input, { milliseconds: 0 })).rejects.toThrow(TypeError);

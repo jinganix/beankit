@@ -8,6 +8,8 @@ export const TWO_POW_32 = 4_294_967_296;
  */
 export class Reader {
   offset: number;
+  /** Current nesting depth. The decoder guards it so hostile input cannot overflow the stack. */
+  depth = 0;
 
   constructor(
     private readonly view: DataView,
@@ -82,7 +84,8 @@ export class Reader {
 
   /**
    * Arguments 24..27 carry their value in 1, 2, 4 or 8 following bytes; read it as a
-   * `[high, low]` pair. A value that fits a shorter form is ill-formed (RFC 8949 §3).
+   * `[high, low]` pair. A longer form than needed is still well-formed CBOR: RFC 8949 §4.1
+   * does not require a decoder to enforce the preferred form, so it is accepted.
    */
   extendedArgument(argument: number): [number, number] {
     let high = 0;
@@ -102,9 +105,6 @@ export class Reader {
         break;
       default:
         throw new Error(`reserved CBOR argument ${argument}`);
-    }
-    if (high === 0 && low < 24) {
-      throw new Error(`non-preferred CBOR argument ${low}`);
     }
     return [high, low];
   }

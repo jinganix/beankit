@@ -169,6 +169,12 @@ describe("cbor", () => {
     expect(() => encodeCBOR(Symbol("nope") as never)).toThrow(/cannot encode a symbol/);
   });
 
+  it("should reject map keys its decoder could not represent", () => {
+    // Otherwise the encoder emits a payload its own decoder refuses.
+    expect(() => encodeCBOR(new Map<boolean, number>([[true, 1]]) as never)).toThrow(/map key/);
+    expect(() => encodeCBOR(new Map([[new Uint8Array([1]), 1]]) as never)).toThrow(/map key/);
+  });
+
   it("should reject bigint tag numbers without the bigint entry point", () => {
     expect(() => encodeCBOR(new CBORTag(10n, 1) as never)).toThrow(/bigint entry point/);
     expect(() => decodeCBOR(decodeHex("db8000000000000000"))).toThrow(/bigint entry point/);
@@ -277,15 +283,24 @@ describe("cbor", () => {
       expect(decodeCBOR(decodeHex("1b0000000000000018"))).toBe(24);
     });
 
-    it("should reject truncated or non-preferred arguments when encoding is malformed", () => {
+    it("should reject truncated arguments when bytes are missing", () => {
       expect(() => decodeCBOR(decodeHex("18"))).toThrow(/unexpected end/);
       expect(() => decodeCBOR(decodeHex("19"))).toThrow(/unexpected end/);
       expect(() => decodeCBOR(decodeHex("1a"))).toThrow(/unexpected end/);
-      expect(() => decodeCBOR(decodeHex("1805"))).toThrow(/non-preferred/);
       expect(() => decodeCBOR(decodeHex("1900"))).toThrow(/unexpected end/);
       expect(() => decodeCBOR(decodeHex("1a000000"))).toThrow(/unexpected end/);
       expect(() => decodeCBOR(decodeHex("1b00000000000000"))).toThrow(/unexpected end/);
-      expect(() => decodeCBOR(decodeHex("1b00000000000000 17"))).toThrow(/non-preferred/);
+    });
+
+    it("should decode non-preferred arguments instead of rejecting them", () => {
+      // Other encoders (cbor-x writes objects this way) emit longer heads than needed;
+      // RFC 8949 §4.1 does not require a decoder to enforce the preferred form.
+      expect(decodeCBOR(decodeHex("1805"))).toBe(5);
+      expect(decodeCBOR(decodeHex("190005"))).toBe(5);
+      expect(decodeCBOR(decodeHex("1b0000000000000005"))).toBe(5);
+      expect(decodeCBOR(decodeHex("780161"))).toBe("a");
+      expect(decodeCBOR(decodeHex("980101"))).toEqual([1]);
+      expect(decodeCBOR(decodeHex("b90001616101"))).toEqual(new Map([["a", 1]]));
     });
 
     it("should reject reserved arguments when the low bits are 28 to 30", () => {
@@ -427,8 +442,37 @@ describe("cbor", () => {
       expect(() => decodeCBOR(decodeHex("fb"))).toThrow(/unexpected end/);
     });
 
-    it("should reject unsupported float16 values when value is subnormal", () => {
-      expect(() => decodeCBOR(decodeHex("f90000"))).toThrow(/float16/);
+    it("should decode finite float16 values", () => {
+      // RFC 8949 Appendix A: zero, subnormals, and the finite half forms.
+      expect(decodeCBOR(decodeHex("f90000"))).toBe(0);
+      expect(Object.is(decodeCBOR(decodeHex("f98000")), -0)).toBe(true);
+      expect(decodeCBOR(decodeHex("f93c00"))).toBe(1);
+      expect(decodeCBOR(decodeHex("f93e00"))).toBe(1.5);
+      expect(decodeCBOR(decodeHex("f97bff"))).toBe(65_504);
+      expect(decodeCBOR(decodeHex("f90001"))).toBe(5.960464477539063e-8);
+      expect(decodeCBOR(decodeHex("f90400"))).toBe(0.00006103515625);
+      expect(decodeCBOR(decodeHex("f9c400"))).toBe(-4);
+    });
+
+    it("should decode every float16 NaN payload as NaN", () => {
+      expect(Number.isNaN(decodeCBOR(decodeHex("f97dff")) as number)).toBe(true);
+      expect(Number.isNaN(decodeCBOR(decodeHex("f97fff")) as number)).toBe(true);
+    });
+  });
+
+  describe("nesting depth", () => {
+    const nested = (levels: number): Uint8Array => {
+      const bytes = new Uint8Array(levels + 1).fill(0x81);
+      bytes[levels] = 0;
+      return bytes;
+    };
+
+    it("should decode nesting within the limit", () => {
+      expect(() => decodeCBOR(nested(400))).not.toThrow();
+    });
+
+    it("should reject nesting deeper than the limit instead of overflowing the stack", () => {
+      expect(() => decodeCBOR(nested(600))).toThrow(/nests deeper/);
     });
   });
 

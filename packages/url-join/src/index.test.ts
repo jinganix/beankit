@@ -28,6 +28,14 @@ describe("urlJoin", () => {
     expect(urlJoin(["http://api.test", "v1"])).toBe("http://api.test/v1");
   });
 
+  it("keeps trailing arguments after an array", () => {
+    expect(urlJoin(["http://api.test", "v1"], "users")).toBe("http://api.test/v1/users");
+  });
+
+  it("flattens nested arrays in any position", () => {
+    expect(urlJoin("http://api.test", ["v1", "users"])).toBe("http://api.test/v1/users");
+  });
+
   it("keeps three slashes for the file protocol", () => {
     expect(urlJoin("file:///tmp", "data")).toBe("file:///tmp/data");
   });
@@ -42,6 +50,13 @@ describe("urlJoin", () => {
 
   it("merges a root slash with the next part", () => {
     expect(urlJoin("/", "foo")).toBe("/foo");
+  });
+
+  it("collapses a root slash merged with an absolute-looking part", () => {
+    // "//foo" would be a protocol-relative URL with host "foo".
+    expect(urlJoin("/", "/foo")).toBe("/foo");
+    expect(urlJoin("/", "//foo")).toBe("/foo");
+    expect(urlJoin("/", "/v1/", "/users/")).toBe("/v1/users/");
   });
 
   it("keeps a lone root slash", () => {

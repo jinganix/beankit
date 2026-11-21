@@ -1,7 +1,7 @@
 /**
  * CBOR encode/decode: maps with string/number keys (`bigint` keys through the bigint entry
- * point), arrays, integers, float32/64 (plus the Infinity/-Infinity/NaN float16 specials),
- * strings, byte strings, booleans, null/undefined, tags, and indefinite-length items.
+ * point), arrays, integers, float16/32/64 (including Infinity, -Infinity and NaN), strings,
+ * byte strings, booleans, null/undefined, tags, and indefinite-length items.
  *
  * BigInt-free by default: integers outside the safe range decode to decimal
  * strings, and this entry point never touches the `BigInt` global, so it

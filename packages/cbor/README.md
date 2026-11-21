@@ -1,9 +1,8 @@
 # @beankit/cbor
 
 CBOR encode/decode: maps with string/number keys (plus `bigint` keys via the bigint entry
-point below), arrays, integers, float32/64 (plus the Infinity, `-Infinity`, and `NaN` float16
-specials), strings, byte strings, booleans, `null`/`undefined`, tags, and indefinite-length
-items.
+point below), arrays, integers, float16/32/64 (including Infinity, `-Infinity`, and `NaN`),
+strings, byte strings, booleans, `null`/`undefined`, tags, and indefinite-length items.
 
 Zero dependencies, works in Node.js, browsers, and workers (ships ESM, CJS,
 and types).
@@ -76,9 +75,15 @@ Using `@beankit/all`? Import `@beankit/all/bigint` for the same codec.
   native `TextDecoder` substitutes `U+FFFD` and the fallback decodes it
   leniently, so a text string that is not valid UTF-8 survives as some string.
 - Non-minimal length prefixes (e.g. the value `5` written as 8 bytes,
-  `1b0000000000000005`) are rejected as not well formed. RFC 8949 §4.2.1 lets a
-  decoder refuse non-preferred serializations; this one does, so re-encodings
-  stay canonical.
+  `1b0000000000000005`) decode too. RFC 8949 §4.1 leaves enforcing the
+  preferred serialization to the encoder, and accepting non-preferred heads
+  keeps payloads from other encoders readable. Decoding never rewrites the
+  input; the encoder always writes the shortest head.
+- Decoding stops at 512 levels of nesting, so a hostile payload cannot
+  overflow the stack of a constrained engine (e.g. MiniProgram JSCore).
+- The encoder writes binary32 whenever that is lossless and binary64 otherwise;
+  it never emits binary16 (a JS number rarely gains from it), though binary16
+  input decodes.
 
 ## Non-goals
 

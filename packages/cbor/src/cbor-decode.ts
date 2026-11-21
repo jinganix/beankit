@@ -25,33 +25,41 @@ import { getTextCodec } from "./text-codec";
 export type ReviveBigInt = (decimal: string) => bigint;
 
 const BREAK = 0xff;
-const HALF_POSITIVE_INFINITY = 0x7c00;
-const HALF_NEGATIVE_INFINITY = 0xfc00;
-const HALF_NAN = 0x7e00;
+
+// shortcut: 512 levels is far beyond any real schema yet well below the smallest engine
+// stacks (MiniProgram JSCore is the tightest target); raise it if a payload nests deeper.
+const MAX_DEPTH = 512;
 
 type SimpleValue = boolean | null | undefined;
 
 function decodeValue(reader: Reader, revive?: ReviveBigInt): BigIntCBORType {
-  const head = reader.uint8();
-  const major = (head >> 5) as MajorType;
-  const argument = head & 0x1f;
-  switch (major) {
-    case MAJOR_TYPE_UNSIGNED_INTEGER:
-      return decodeInteger(reader, argument, false, revive);
-    case MAJOR_TYPE_NEGATIVE_INTEGER:
-      return decodeInteger(reader, argument, true, revive);
-    case MAJOR_TYPE_BYTE_STRING:
-      return decodeStringBody(reader, argument, MAJOR_TYPE_BYTE_STRING);
-    case MAJOR_TYPE_TEXT_STRING:
-      return getTextCodec().decode(decodeStringBody(reader, argument, MAJOR_TYPE_TEXT_STRING));
-    case MAJOR_TYPE_ARRAY:
-      return decodeArray(reader, argument, revive);
-    case MAJOR_TYPE_MAP:
-      return decodeMap(reader, argument, revive);
-    case MAJOR_TYPE_TAG:
-      return new CBORTag(decodeTagNumber(reader, argument, revive), decodeValue(reader, revive));
-    case MAJOR_TYPE_SIMPLE_OR_FLOAT:
-      return decodeSimple(reader, argument);
+  if (++reader.depth > MAX_DEPTH) {
+    throw new Error(`CBOR item nests deeper than ${MAX_DEPTH} levels`);
+  }
+  try {
+    const head = reader.uint8();
+    const major = (head >> 5) as MajorType;
+    const argument = head & 0x1f;
+    switch (major) {
+      case MAJOR_TYPE_UNSIGNED_INTEGER:
+        return decodeInteger(reader, argument, false, revive);
+      case MAJOR_TYPE_NEGATIVE_INTEGER:
+        return decodeInteger(reader, argument, true, revive);
+      case MAJOR_TYPE_BYTE_STRING:
+        return decodeStringBody(reader, argument, MAJOR_TYPE_BYTE_STRING);
+      case MAJOR_TYPE_TEXT_STRING:
+        return getTextCodec().decode(decodeStringBody(reader, argument, MAJOR_TYPE_TEXT_STRING));
+      case MAJOR_TYPE_ARRAY:
+        return decodeArray(reader, argument, revive);
+      case MAJOR_TYPE_MAP:
+        return decodeMap(reader, argument, revive);
+      case MAJOR_TYPE_TAG:
+        return new CBORTag(decodeTagNumber(reader, argument, revive), decodeValue(reader, revive));
+      case MAJOR_TYPE_SIMPLE_OR_FLOAT:
+        return decodeSimple(reader, argument);
+    }
+  } finally {
+    reader.depth -= 1;
   }
 }
 
@@ -209,19 +217,21 @@ function decodeSimple(reader: Reader, argument: number): SimpleValue | number {
   }
 }
 
-/** Only the float16 specials are supported; every finite half float reads as an error. */
+/**
+ * Decodes a binary16 value (RFC 8949 §3.3): 1 sign bit, 5 exponent bits, 10 fraction bits.
+ * Subnormals have no implicit leading 1; exponent 31 is Infinity (zero fraction) or NaN.
+ */
 function decodeHalfFloat(reader: Reader): number {
   const bits = reader.uint16();
-  switch (bits) {
-    case HALF_POSITIVE_INFINITY:
-      return Infinity;
-    case HALF_NEGATIVE_INFINITY:
-      return -Infinity;
-    case HALF_NAN:
-      return NaN;
-    default:
-      throw new Error("unsupported float16 value");
+  const sign = bits & 0x80_00 ? -1 : 1;
+  const exponent = (bits >>> 10) & 0x1f;
+  const fraction = bits & 0x3_ff;
+  if (exponent === 0x1f) {
+    return fraction === 0 ? sign * Infinity : NaN;
   }
+  const magnitude =
+    (exponent === 0 ? fraction : fraction + 0x4_00) * 2 ** (exponent === 0 ? -24 : exponent - 25);
+  return sign * magnitude;
 }
 
 /**
